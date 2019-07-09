@@ -282,7 +282,11 @@ profile_setup() {
   fi
 
   echo " * Copying /srv/config/ssh_known_hosts to /etc/ssh/ssh_known_hosts"
- cp -f /srv/config/ssh_known_hosts /etc/ssh/ssh_known_hosts
+  cp -f /srv/config/ssh_known_hosts /etc/ssh/ssh_known_hosts
+  echo " * Copying /srv/config/sshd_config to /etc/ssh/sshd_config"
+  cp -f /srv/config/sshd_config /etc/ssh/sshd_config
+  echo " * Reloading SSH Daemon"
+  systemctl reload ssh
 }
 
 not_installed() {
@@ -333,6 +337,7 @@ package_install() {
     echo " * adding the mysql user"
     useradd -u 9001 -g mysql -G vboxsf -r mysql
   fi
+  id mysql
 
   mkdir -p "/etc/mysql/conf.d"
   echo " * Copying /srv/config/mysql-config/vvv-core.cnf to /etc/mysql/conf.d/vvv-core.cnf"
@@ -436,6 +441,20 @@ tools_install() {
   # Disable xdebug before any composer provisioning.
   sh /srv/config/homebin/xdebug_off
 
+  echo "Checking for NVM"
+  if [[ -f ~/.nvm ]]; then
+    echo ".nvm folder found, switching to system node, and removing NVM folders"
+    nvm use system
+    rm -rf ~/.nvm ~/.npm ~/.bower /srv/config/nvm
+    echo "NVM folders removed"
+  fi
+  
+  if [[ $(nodejs -v | sed -ne 's/[^0-9]*\(\([0-9]\.\)\{0,4\}[0-9][^.]\).*/\1/p') != '10' ]]; then
+    echo "Downgrading to Node v10."
+    apt remove nodejs -y
+    apt install -y --allow-downgrades --allow-remove-essential --allow-change-held-packages -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew install --fix-missing --fix-broken nodejs
+  fi
+  
   # npm
   #
   # Make sure we have the latest npm version and the update checker module
@@ -455,15 +474,15 @@ tools_install() {
     curl -s https://beyondgrep.com/ack-2.16-single-file > "/usr/bin/ack" && chmod +x "/usr/bin/ack"
   fi
 
-  # Make sure the composer cache is not owned by root
+  echo "Making sure the composer cache is not owned by root"
   mkdir -p /usr/local/src/composer
   mkdir -p /usr/local/src/composer/cache
   chown -R vagrant:www-data /usr/local/src/composer
   chown -R vagrant:www-data /usr/local/bin
 
   # COMPOSER
-  #
-  # Install Composer if it is not yet available.
+
+  echo "Checking for Composer"
   exists_composer="$(which composer)"
   if [[ "/usr/local/bin/composer" != "${exists_composer}" ]]; then
     echo "Installing Composer..."
@@ -472,7 +491,11 @@ tools_install() {
     mv "composer.phar" "/usr/local/bin/composer"
   fi
 
-  if [[ -f /srv/provision/github.token ]]; then
+  github_token=`cat ${VVV_CONFIG} | shyaml get-value general.github_token 2> /dev/null`
+  if [[ ! -z $github_token ]]; then
+    rm /srv/provision/github.token
+    echo $github_token >> /srv/provision/github.token
+    echo "A personal GitHub token was found, configuring composer"
     ghtoken=`cat /srv/provision/github.token`
     noroot composer config --global github-oauth.github.com $ghtoken
     echo "Your personal GitHub token is set for Composer."
@@ -482,26 +505,27 @@ tools_install() {
   # the master branch on its GitHub repository.
   if [[ -n "$(noroot composer --version --no-ansi | grep 'Composer version')" ]]; then
     echo "Updating Composer..."
+    COMPOSER_HOME=/usr/local/src/composer noroot composer --no-ansi global config bin-dir /usr/local/bin
     COMPOSER_HOME=/usr/local/src/composer noroot composer --no-ansi self-update --no-progress --no-interaction
     COMPOSER_HOME=/usr/local/src/composer noroot composer --no-ansi global require --no-update --no-progress --no-interaction phpunit/phpunit:6.* phpunit/php-invoker:1.1.* mockery/mockery:0.9.* d11wtq/boris:v1.0.8
-    COMPOSER_HOME=/usr/local/src/composer noroot composer --no-ansi global config bin-dir /usr/local/bin
     COMPOSER_HOME=/usr/local/src/composer noroot composer --no-ansi global update --no-progress --no-interaction
   fi
 
 
   function install_grunt() {
     echo "Installing Grunt CLI"
-    npm install -g grunt grunt-cli
-    hack_avoid_gyp_errors & npm install -g grunt-sass; touch /tmp/stop_gyp_hack
-    npm install -g grunt-cssjanus
-    npm install -g grunt-rtlcss
+    noroot npm install -g grunt grunt-cli --no-optional
+    hack_avoid_gyp_errors & noroot npm install -g grunt-sass --no-optional; touch /tmp/stop_gyp_hack
+    noroot npm install -g grunt-cssjanus --no-optional
+    noroot npm install -g grunt-rtlcss --no-optional
   }
+  
   function update_grunt() {
     echo "Updating Grunt CLI"
-    npm update -g grunt grunt-cli
+    npm update -g grunt grunt-cli --no-optional
     hack_avoid_gyp_errors & npm update -g grunt-sass; touch /tmp/stop_gyp_hack
-    npm update -g grunt-cssjanus
-    npm update -g grunt-rtlcss
+    npm update -g grunt-cssjanus --no-optional
+    npm update -g grunt-rtlcss --no-optional
   }
   # Grunt
   #
@@ -524,13 +548,12 @@ tools_install() {
     done
     rm /tmp/stop_gyp_hack
   }
-  exists_grunt="$(which grunt)"
-  if [[ "/usr/bin/grunt" != "${exists_grunt}" ]]; then
+  chown -R vagrant:vagrant /usr/lib/node_modules/
+  if command -v grunt >/dev/null 2>&1; then
     install_grunt
   else
     update_grunt
   fi
-  chown -R vagrant:vagrant /usr/lib/node_modules/
 
   # Graphviz
   #
