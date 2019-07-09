@@ -593,8 +593,17 @@ SCRIPT
   # If a www directory exists in the same directory as your Vagrantfile, a mapped directory
   # inside the VM will be created that acts as the default location for nginx sites. Put all
   # of your project files here that you want to access through the web server
-  config.vm.synced_folder "www/", "/srv/www", owner: "vagrant", group: "www-data", mount_options: [ "dmode=775", "fmode=774" ]
+  #config.vm.synced_folder "www/", "/srv/www", owner: "vagrant", group: "www-data", mount_options: [ "dmode=775", "fmode=774" ]
 
+  config.vm.synced_folder "www/", "/srv/www/", id: "vagrant-root", type: "nfs",
+      nfs_export: true,
+      #nfs_version: 3,
+      nfs_udp: false,
+      mount_options: ['nolock', 'vers=3', 'fsc', 'rw', 'noatime'],
+      # mount_options: ['rw', 'intr', 'tcp', 'fsc', 'actimeo=2', 'nolock', 'noacl'],
+      bsd__nfs_options: ["alldirs", "fsuuid=0468D24E-55A4-31C2-810C-6B05CAE009EC"],
+      linux__nfs_options: ['rw', 'no_subtree_check', 'all_squash', 'async']
+      
   vvv_config['sites'].each do |site, args|
     if args['local_dir'] != File.join(vagrant_dir, 'www', site) then
       config.vm.synced_folder args['local_dir'], args['vm_dir'], owner: "vagrant", group: "www-data", :mount_options => [ "dmode=775", "fmode=774" ]
