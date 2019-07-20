@@ -381,7 +381,7 @@ Vagrant.configure("2") do |config|
     v.enable_virtualization_extensions = true
     v.linked_clone = true
   end
-  
+
   # Auto Download Vagrant plugins, supported from Vagrant 2.2.0
   if !Vagrant.has_plugin?("vagrant-hostsupdater") then
       if File.file?(File.join(vagrant_dir, 'vagrant-hostsupdater.gem')) then
@@ -396,7 +396,7 @@ Vagrant.configure("2") do |config|
 
   # The vbguest plugin has issues for some users, so we're going to disable it for now
   if Vagrant.has_plugin?("vagrant-vbguest")
-    config.vbguest.auto_update = false  
+    config.vbguest.auto_update = false
   end
 
   # SSH Agent Forwarding
@@ -509,7 +509,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "file", source: "#{vagrant_dir}/vvv-custom.yml", destination: "/home/vagrant/vvv-custom.yml"
   $script = <<-SCRIPT
 # cleanup
-rm -rf /vagrant/* 
+rm -rf /vagrant/*
 mkdir -p /vagrant
 touch /vagrant/provisioned_at
 echo `date "+%Y%m%d-%H%M%S"` > /vagrant/provisioned_at
@@ -569,12 +569,12 @@ SCRIPT
   config.vm.synced_folder "config/", "/srv/config"
 
   # /srv/config/
-  # 
+  #
   # Map the provision folder so that utilities and provisioners can access helper scripts
   config.vm.synced_folder "provision/", "/srv/provision"
 
   # /srv/certificates
-  # 
+  #
   # This is a location for the TLS certificates to be accessible inside the VM
   config.vm.synced_folder "certificates/", "/srv/certificates", create: true
 
@@ -602,7 +602,7 @@ SCRIPT
       # mount_options: ['rw', 'intr', 'tcp', 'fsc', 'actimeo=2', 'nolock', 'noacl'],
       bsd__nfs_options: ["alldirs", "fsuuid=0468D24E-55A4-31C2-810C-6B05CAE009EC"],
       linux__nfs_options: ['rw', 'no_subtree_check', 'all_squash', 'async']
-      
+
   vvv_config['sites'].each do |site, args|
     if args['local_dir'] != File.join(vagrant_dir, 'www', site) then
       config.vm.synced_folder args['local_dir'], args['vm_dir'], owner: "vagrant", group: "www-data", :mount_options => [ "dmode=775", "fmode=774" ]
@@ -629,7 +629,7 @@ SCRIPT
   # override the www folder with options that make it Hyper-V compatible.
   config.vm.provider :hyperv do |v, override|
     v.vmname = File.basename(vagrant_dir) + "_" + (Digest::SHA256.hexdigest vagrant_dir)[0..10]
-    
+
     override.vm.synced_folder "www/", "/srv/www", :owner => "vagrant", :group => "www-data", :mount_options => [ "dir_mode=0775", "file_mode=0774" ]
     override.vm.synced_folder "log/", "/var/log", :owner => "vagrant", :mount_options => []
 
@@ -642,7 +642,7 @@ SCRIPT
     override.vm.synced_folder "log/nginx", "/var/log/nginx", owner: "root", create: true,  group: "syslog", mount_options: [ "dir_mode=0777", "file_mode=0666" ]
     override.vm.synced_folder "log/php", "/var/log/php", create: true, owner: "root", group: "syslog", mount_options: [ "dir_mode=0777", "file_mode=0666" ]
     override.vm.synced_folder "log/provisioners", "/var/log/provisioners", create: true, owner: "root", group: "syslog", mount_options: [ "dir_mode=0777", "file_mode=0666" ]
-    
+
     vvv_config['sites'].each do |site, args|
       if args['local_dir'] != File.join(vagrant_dir, 'www', site) then
         override.vm.synced_folder args['local_dir'], args['vm_dir'], :owner => "vagrant", :group => "www-data", :mount_options => [ "dir_mode=0775", "file_mode=0774" ]
@@ -718,7 +718,7 @@ SCRIPT
   # Provision the dashboard that appears when you visit vvv.test
   config.vm.provision "dashboard",
       type: "shell",
-      keep_color: true, 
+      keep_color: true,
       path: File.join( "provision", "provision-dashboard.sh" ),
       args: [
         vvv_config['dashboard']['repo'],
@@ -728,7 +728,7 @@ SCRIPT
   vvv_config['utility-sources'].each do |name, args|
     config.vm.provision "utility-source-#{name}",
       type: "shell",
-      keep_color: true, 
+      keep_color: true,
       path: File.join( "provision", "provision-utility-source.sh" ),
       args: [
           name,
@@ -749,7 +749,7 @@ SCRIPT
         end
         config.vm.provision "utility-#{name}-#{utility}",
           type: "shell",
-          keep_color: true, 
+          keep_color: true,
           path: File.join( "provision", "provision-utility.sh" ),
           args: [
               name,
@@ -762,7 +762,7 @@ SCRIPT
     if args['skip_provisioning'] === false then
       config.vm.provision "site-#{site}",
         type: "shell",
-        keep_color: true, 
+        keep_color: true,
         path: File.join( "provision", "provision-site.sh" ),
         args: [
           site,
