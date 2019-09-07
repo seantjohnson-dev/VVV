@@ -169,7 +169,7 @@ vvv_config['sites'].each do |site, args|
   defaults['branch'] = 'master'
   defaults['skip_provisioning'] = false
   defaults['allow_customfile'] = false
-  defaults['nginx_upstream'] = 'php'
+  defaults['nginx_upstream'] = 'php73'
   defaults['hosts'] = Array.new
 
   vvv_config['sites'][site] = defaults.merge(args)
@@ -595,7 +595,7 @@ SCRIPT
   #config.vm.synced_folder "www/", "/srv/www", owner: "vagrant", group: "www-data", mount_options: [ "dmode=775", "fmode=774" ]
 
   config.vm.synced_folder "www/", "/srv/www/", id: "vagrant-root", type: "nfs",
-      nfs_export: true,
+      nfs_export: false,
       #nfs_version: 3,
       nfs_udp: false,
       mount_options: ['nolock', 'vers=3', 'fsc', 'rw', 'noatime'],
